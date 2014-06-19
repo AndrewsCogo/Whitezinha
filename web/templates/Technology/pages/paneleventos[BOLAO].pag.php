@@ -1,0 +1,1 @@
+<div align="center">{Bolao_Open}</div>

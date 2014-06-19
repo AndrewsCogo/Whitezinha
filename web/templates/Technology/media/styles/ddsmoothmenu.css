@@ -1,0 +1,16 @@
+/*************************************************
+** DDSmoothMenu plugin CSS styles
+** Modify by: LucasHP (CTM Team Softwares)
+** Contact: lucashp@lhpdesigner.com.br
+*************************************************/
+* html .ddsmoothmenu{height:1%;} /*Holly Hack for IE7 and below*/
+.downarrowclass{position:absolute; top:12px; right:7px;}
+.rightarrowclass{position:absolute; top:6px; right:5px;}
+.ddshadow{position:absolute; left:0; top:0; width:0; height:0;}
+.toplevelshadow{/*shadow opacity. Doesn't work in IE*/}
+.ddsmoothmenu ul li ul{position:absolute; margin:0; display:none; visibility:hidden; padding:0 !important; width:160px; height:auto; border-radius:0 !important; -moz-border-radius:0 !important; -webkit-border-radius:0 !important; border:none !important;}
+.ddsmoothmenu ul li ul li{display:list-item; float:none; border-right:none !important;}
+.ddsmoothmenu ul li ul li ul{top:0;}
+.ddsmoothmenu ul li ul li a{margin:0; border-bottom:1px dotted #222; display:inline-block; width:150px; background:#090909 !important; font:10px Tahoma, Geneva, sans-serif !important; color:#4ea4a5 !important; padding:10px !important;}
+.ddsmoothmenu ul li ul li a:hover{background:#030303 !important; color:#248af2 !important;}
+* html .ddsmoothmenu{height:1%;} /*Holly Hack for IE7 and below*/
