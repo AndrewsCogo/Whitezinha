@@ -254,8 +254,9 @@ class CTM_Ranking
                         $orderby = 'desc';
                     break;
             }
-            $query = CTM_MSSQL::getInstance()->Query('SELECT top '.$Top.' name as charName, '.$Table.' as charRanking 
-            FROM MuOnline.[dbo].[Character] '.$where.' order by '.$Table.' '.$orderby.', cLevel desc');
+            $Select = sprintf_s("SELECT top %s name as charName, %s as charRanking 
+            FROM MuOnline.[dbo].[Character] %s order by %s %s, cLevel desc", $Top, $Table, $where, $Table, $orderby);
+            $query = CTM_MSSQL::getInstance()->Query($Select);
             $count = CTM_MSSQL::getInstance()->NumRow($query);
             if($count < 1) {
                     $return = die('<div class="warning-box">Nenhum personagem foi encontrado!</div>');
