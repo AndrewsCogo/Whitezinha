@@ -68,7 +68,8 @@ class CTM_Search
 				}
 				else
 				{
-					$Query = CTM_Mssql::getInstance()->Query("SELECT * FROM MuOnline.dbo.Character WHERE Name='".$Char."'");
+					$Select = sprintf_s("SELECT * FROM MuOnline.dbo.Character WHERE Name='%s'", $Char);
+					$Query = CTM_Mssql::getInstance()->Query($Select);
 					$Load = CTM_Mssql::getInstance()->FetchArray($Query);
 					$Server = CTM_Mssql::getInstance()->FetchQuery("SELECT ConnectStat,ServerName FROM ".MuAcc_DB.".dbo.MEMB_STAT WHERE memb___id='".$Load["AccountID"]."'");
 					$Class = CTM_General::getInstance()->ClassName($Load["Class"]);
