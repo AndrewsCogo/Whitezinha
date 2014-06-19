@@ -9,11 +9,12 @@ class CTM_Reference extends CTM_MSSQL
 {
 	public function ReferenceLink($id)
 	{
-			$query = $this->Query("SELECT Id FROM dbo.CTM_WebReference WHERE Id = ".$id);
+			$Select = sprintf_s("SELECT Id FROM dbo.CTM_WebReference WHERE Id = '%s'", $id);
+			$query = $this->Query($Select);
 			$check = $this->NumRow($query);
                         $Ip = $this->Query("SELECT IPAddress FROM dbo.CTM_WebReferenceData WHERE IPAddress='".$_SERVER['REMOTE_ADDR']."'");
                         $IpCheck = $this->NumRow($Ip);
-                        $Redirect   = "http://muwhite.net/";       // Página de redirect
+                        $Redirect   = "http://muwhite.net/";       // Pï¿½gina de redirect
                         if($IpCheck > 0)
                         {
                             exit("<script>alert ('Voce ja clicou neste link!');window.location='$Redirect';</script>");   
