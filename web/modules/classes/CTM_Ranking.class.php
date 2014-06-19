@@ -467,8 +467,6 @@ class CTM_Ranking
     }
     private function generateCharGuild($Type, $nome)
     {
-		global $CTM_General;
-		
 		if($Type == 1)
 		{
                     $Query = CTM_MSSQL::getInstance()->Query("SELECT * FROM MuOnline.dbo.Character WHERE Name='{$nome}'");
