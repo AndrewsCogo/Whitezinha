@@ -7,9 +7,17 @@ if ($Page_Request == $Page_File)
 }
 class CTM_PanelAdmin extends CTM_MSSQL
 {
+        private static $_instance;
+
+        public static function getInstance() {
+            if(!isset($_instance)) {
+                self::$_instance = new self();
+            }
+            return self::$_instance;
+        }
 	public function __construct()
 	{
-		global $CTM_Template, $_PanelAdmin, $CTM;
+		global $CTM_Template, $_PanelAdmin;
 		$this->Login = $_SESSION["Hash_Account"];
 		
 		$CTMT = "templates/".$CTM_Template->Open()."/pages/";
@@ -230,7 +238,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			default :
 			if($_GET["cmd"] == "warning")
 			{
-				$this->Query("DELETE dbo.{$CTM[5]}");
+				$this->Query("DELETE dbo.CTM_WebWarning");
 				die("<div class=\"success-box\"> Aviso removido com Sucesso!</div>");
 			}
 			if(strtoupper($_GET["option"]) == TRUE)
@@ -248,7 +256,6 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Privilegy($Privilegy, $String = 2)
 	{
-		global $CTM;
 		$Check_Exists = $this->NumQuery("SELECT * FROM dbo.CTM_WebStaff WHERE account='{$this->Login}'");
 		$Check = $this->FetchQuery("SELECT type FROM dbo.CTM_WebStaff WHERE account='{$this->Login}'");
 		if($String == 1)
@@ -290,7 +297,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Home()
 	{
-		global $CTM_General, $CTM_Template;
+		global $CTM_Template;
 		echo("<script type=\"text/javascript\" src=\"modules/javascripts/SpryTabbedPanels.js\"></script>
 		<style type=\"text/css\"> @import url('modules/css/SpryTabbedPanels.css'); </style>\n\r");
 		
@@ -298,13 +305,13 @@ class CTM_PanelAdmin extends CTM_MSSQL
 		{
 			$Connect_GS = @fsockopen(GS_Host, GS_Port, $error, $msg, 1);
 		}
-		$Info["Accounts"] = $CTM_General->ServerInfo(1, MuAcc_DB, "MEMB_INFO", false, false, false);
-		$Info["Characters"] = $CTM_General->ServerInfo(1, MuGen_DB, "Character", false, false, false);
-		$Info["Guilds"] = $CTM_General->ServerInfo(1, MuGen_DB, "Guild", false, false, false);
-		$Info["VIP-1"] = $CTM_General->ServerInfo(2, VIP_DB, VIP_Table, VIP_Column, 1, false);
-		$Info["VIP-2"] = $CTM_General->ServerInfo(2, VIP_DB, VIP_Table, VIP_Column, 2, false);
-		$Info["Acc_Ban"] = $CTM_General->ServerInfo(2, MuAcc_DB, "MEMB_INFO", "bloc_code", 1, false);
-		$Info["Char_Ban"] = $CTM_General->ServerInfo(2, MuGen_DB, "Character", "CtlCode", 1, false);
+		$Info["Accounts"] = CTM_General::getInstance()->ServerInfo(1, MuAcc_DB, "MEMB_INFO", false, false, false);
+		$Info["Characters"] = CTM_General::getInstance()->ServerInfo(1, MuGen_DB, "Character", false, false, false);
+		$Info["Guilds"] = CTM_General::getInstance()->ServerInfo(1, MuGen_DB, "Guild", false, false, false);
+		$Info["VIP-1"] = CTM_General::getInstance()->ServerInfo(2, VIP_DB, VIP_Table, VIP_Column, 1, false);
+		$Info["VIP-2"] = CTM_General::getInstance()->ServerInfo(2, VIP_DB, VIP_Table, VIP_Column, 2, false);
+		$Info["Acc_Ban"] = CTM_General::getInstance()->ServerInfo(2, MuAcc_DB, "MEMB_INFO", "bloc_code", 1, false);
+		$Info["Char_Ban"] = CTM_General::getInstance()->ServerInfo(2, MuGen_DB, "Character", "CtlCode", 1, false);
 		$Info["Status"] = Status_Enable == 1 ? $Connect_GS == true ? "<span style=\"color: green;\">Online</span>" : "<span style=\"color: red;\">Offline</span>" : "<span style=\"color: red;\">Manuten&ccedil;&atilde;o</span>";
                 $Staff = $this->Query("SELECT * FROM CTM_WebStaff where account='{$this->Login}'");
                 $Staffers = $this->FetchObject($Staff);
@@ -361,8 +368,6 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Synchronize($Syntax)
 	{
-		global $CTM_General, $CTM;
-		
 		if($Syntax == "VIP")
 		{
 			$Query = $this->Query("SELECT ".VIP_Time.",".VIP_Credits.",".VIP_Login.",".VIP_Column." FROM ".VIP_DB.".dbo.".VIP_Table." WHERE ".VIP_Column." > 0");
@@ -371,7 +376,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 				if(time() >= $Synchronizing[0] || $Synchronizing[1] < 1)
 				{
 					$this->Query("UPDATE ".VIP_DB.".dbo.".VIP_Table." SET ".VIP_Column."=0,".VIP_Begin."=0,".VIP_Time."=0,".VIP_Credits."=0 WHERE ".VIP_Login."='".$Synchronizing[2]."'");
-					$Operation .= "&raquo; <strong>".$Synchronizing[2]."</strong> - <strong class=\"colr\">".$CTM_General->Memb_Type($Synchronizing[3])."</strong> vencido <strong class=\"red\">[".date("d/m/Y", $Synchronizing[0])." as ".date("H:i", $Synchronizing[0])."]</strong><br />\n";
+					$Operation .= "&raquo; <strong>".$Synchronizing[2]."</strong> - <strong class=\"colr\">".CTM_General::getInstance()->Memb_Type($Synchronizing[3])."</strong> vencido <strong class=\"red\">[".date("d/m/Y", $Synchronizing[0])." as ".date("H:i", $Synchronizing[0])."]</strong><br />\n";
 				}
 			}
 			$Count = count($Operation);
@@ -379,13 +384,13 @@ class CTM_PanelAdmin extends CTM_MSSQL
 		}
 		if($Syntax == "CHAR")
 		{
-			$Query = $this->Query("SELECT Time,Character FROM dbo.{$CTM[8]}");
+			$Query = $this->Query("SELECT Time,Character FROM dbo.CTM_WebCharBan");
 			while($Synchronizing = $this->Fetch($Query))
 			{
 				if(time() >= $Synchronizing[0])
 				{
-					$this->Query("UPDATE ".MuGen_DB.".dbo.Character SET CtlCode=0 WHERE Name='{$Synchronizing[1]}'");
-					$this->Query("DELETE dbo.{$CTM[8]} WHERE Character='{$Synchronizing[1]}'");
+					$this->Query("UPDATE MuOnline.dbo.Character SET CtlCode=0 WHERE Name='{$Synchronizing[1]}'");
+					$this->Query("DELETE dbo.CTM_WebCharBan WHERE Character='{$Synchronizing[1]}'");
 					$Operation .= "&raquo; Char <strong class=\"colr\">".$Synchronizing[1]."</strong> desbanido <strong class=\"red\">[".date("d/m/Y", $Synchronizing[0])." as ".date("H:i", $Synchronizing[0])."]</strong><br />\n";
 				}
 			}
@@ -394,13 +399,13 @@ class CTM_PanelAdmin extends CTM_MSSQL
 		}
 		if($Syntax == "ACC")
 		{
-			$Query = $this->Query("SELECT Time,Account FROM dbo.{$CTM[7]}");
+			$Query = $this->Query("SELECT Time,Account FROM dbo.CTM_WebAccBan");
 			while($Synchronizing = $this->Fetch($Query))
 			{
 				if(time() >= $Synchronizing[0])
 				{
 					$this->Query("UPDATE ".MuAcc_DB.".dbo.MEMB_INFO SET bloc_code=0 WHERE memb___id='{$Synchronizing[1]}'");
-					$this->Query("DELETE dbo.{$CTM[7]} WHERE Account='{$Synchronizing[1]}'");
+					$this->Query("DELETE dbo.CTM_WebAccBan WHERE Account='{$Synchronizing[1]}'");
 					$Operation .= "&raquo; Conta <strong class=\"colr\">".$Synchronizing[1]."</strong> desbanida <strong class=\"red\">[".date("d/m/Y", $Synchronizing[0])." as ".date("H:i", $Synchronizing[0])."]</strong><br />\n";
 				}
 			}
@@ -464,7 +469,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Add_CronbTab()
 	{
-		global $CTM, $_PanelAdmin;
+		global $_PanelAdmin;
 		
 		if($_GET["cmd"] == TRUE)
 		{
@@ -490,7 +495,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("INSERT INTO dbo.{$CTM[13]} (CronTab,Cron_Time,Coin,Number) VALUES ({$CronTab},'{$Time}',{$Moeda},{$Number})");
+				$this->Query("INSERT INTO dbo.CTM_WebCronJob (CronTab,Cron_Time,Coin,Number) VALUES ({$CronTab},'{$Time}',{$Moeda},{$Number})");
 				die("<div class=\"success-box\"> CronTab Adicionado com Sucesso.</div>");
 			}
 		}
@@ -517,20 +522,20 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function List_CronTab()
 	{
-		global $CTM_Template, $CTM, $_PanelAdmin;
+		global $CTM_Template, $_PanelAdmin;
 		
-		$Check = $this->NumQuery("SELECT * FROM dbo.{$CTM[13]}");
+		$Check = $this->NumQuery("SELECT * FROM dbo.CTM_WebCronJob");
 
 		if($_GET["cmd"] == "delete")
 		{
-			$Check_Delete = $this->NumQuery("SELECT * FROM dbo.{$CTM[13]} WHERE Id='".$_POST["Id"]."'");
+			$Check_Delete = $this->NumQuery("SELECT * FROM dbo.CTM_WebCronJob WHERE Id='".$_POST["Id"]."'");
 			if($Check_Delete < 1)
 			{
 				die("<div class=\"error-box\"> Este CronTab n&atilde;o existe.</div>");
 			}
 			else
 			{
-				$this->Query("DELETE dbo.{$CTM[13]} WHERE Id='".$_POST["Id"]."'");
+				$this->Query("DELETE dbo.CTM_WebCronJob WHERE Id='".$_POST["Id"]."'");
 				die("<div class=\"success-box\"> CromTab deletado com Sucesso!</div>");
 			}
 		}
@@ -544,7 +549,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	   	}
 	    else
 	   	{
-		  	$Query = $this->Query("SELECT Id,CronTab,Cron_Time,Cron_Next FROM dbo.{$CTM[13]} ORDER BY Id DESC");
+		  	$Query = $this->Query("SELECT Id,CronTab,Cron_Time,Cron_Next FROM dbo.CTM_WebCronJob ORDER BY Id DESC");
 		   	while($Get = $this->Fetch($Query))
 		   	{
 				switch($Get[1])
@@ -562,7 +567,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Manage_CronTab()
 	{
-		global $CTM_Template, $CTM;
+		global $CTM_Template;
 		
 		if($_GET["cmd"] == TRUE)
 		{
@@ -587,7 +592,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("UPDATE dbo.{$CTM[13]} SET CronTab={$CronTab},Cron_Time='{$Time}',Coin={$Moeda},Number={$Number} WHERE Id=".$_GET["id"]);
+				$this->Query("UPDATE dbo.CTM_WebCronJob SET CronTab={$CronTab},Cron_Time='{$Time}',Coin={$Moeda},Number={$Number} WHERE Id=".$_GET["id"]);
 				die("<div class=\"success-box\"> CronTab Editado com Sucesso.</div>");
 			}
 		}
@@ -618,14 +623,14 @@ class CTM_PanelAdmin extends CTM_MSSQL
 					document.getElementById(\"Moeda\").disabled = false;
 				}
 				</script>\n\r");
-		$Check = $this->NumQuery("SELECT * FROM dbo.{$CTM[13]}");
+		$Check = $this->NumQuery("SELECT * FROM dbo.CTM_WebCronJob");
 		
-		$Check = $this->NumQuery("SELECT * FROM dbo.{$CTM[13]} WHERE Id='".$_POST["Id"]."'");
+		$Check = $this->NumQuery("SELECT * FROM dbo.CTM_WebCronJob WHERE Id='".$_POST["Id"]."'");
 		if($Check < 1)
 		{
 				die("<div class=\"error-box\"> Este CronTab n&atilde;o existe.</div>");
 		}
-		$Query = $this->Query("SELECT * FROM dbo.{$CTM[13]} WHERE Id='".$_POST["Id"]."'");
+		$Query = $this->Query("SELECT * FROM dbo.CTM_WebCronJob WHERE Id='".$_POST["Id"]."'");
 		$Load = $this->FetchArray($Query);
 		
 		$Cron_Time = explode(":", $Load["Cron_Time"]);
@@ -645,8 +650,6 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Add_File()
 	{
-		global $CTM;
-		
 		if($_GET["cmd"] == TRUE)
 		{
 			$Name = $_POST["Name"];
@@ -660,15 +663,15 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("INSERT INTO dbo.{$CTM[2]} (name,link,description,file_size) VALUES ('{$Name}','{$Link}','{$Description}','{$File_Size}')");
+				$this->Query("INSERT INTO dbo.CTM_WebFiles (name,link,description,file_size) VALUES ('{$Name}','{$Link}','{$Description}','{$File_Size}')");
 				die("<div class=\"success-box\"> Arquivo <b>{$Name}</b> adicionado com Sucesso!</div>");
 			}
 		}
 	}
 	private function File_List()
 	{
-		global $CTM_Template, $CTM;
-		$Check = $this->NumQuery("SELECT * FROM dbo.{$CTM[2]}");
+		global $CTM_Template;
+		$Check = $this->NumQuery("SELECT * FROM dbo.CTM_WebFiles");
 		
 		if($Check < 1)
 	   	{
@@ -676,7 +679,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	   	}
 		else
 		{
-			 $Query = $this->Query("SELECT name,id FROM dbo.{$CTM[2]} ORDER BY id DESC");
+			 $Query = $this->Query("SELECT name,id FROM dbo.CTM_WebFiles ORDER BY id DESC");
 			 while($Get = $this->Fetch($Query))
 		   	 {
 			   	 $Return .= "<option value=\"{$Get[1]}\">".$Get[0]."</option>\n";
@@ -687,19 +690,19 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Manage_File()
 	{
-		global $CTM_Template, $CTM;
+		global $CTM_Template;
 		
 		if($_GET["cmd"] == TRUE)
 		{
 			$Id = $_POST["Id"];
-			$Check = $this->NumQuery("SELECT * FROM dbo.{$CTM[2]} WHERE id='{$Id}'");
+			$Check = $this->NumQuery("SELECT * FROM dbo.CTM_WebFiles WHERE id='{$Id}'");
 			if($Check < 1)
 			{
 				die("<div class=\"error-box\"> Este arquivo n&atilde;o existe.</div>");
 			}
 			else
 			{
-				$this->Query("DELETE dbo.{$CTM[2]} WHERE id='{$Id}'");
+				$this->Query("DELETE dbo.CTM_WebFiles WHERE id='{$Id}'");
 				die("<div class=\"success-box\"> Arquivo deletado com Sucesso!</div>");
 			}
 		}
@@ -717,19 +720,19 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("UPDATE dbo.{$CTM[2]} SET name='{$Name}',link='{$Link}',description='{$Description}',file_size='{$File_Size}' WHERE id='{$Id}'");
+				$this->Query("UPDATE dbo.CTM_WebFiles SET name='{$Name}',link='{$Link}',description='{$Description}',file_size='{$File_Size}' WHERE id='{$Id}'");
 				die("<div class=\"success-box\"> Arquivo editado com Sucesso!</div>");
 			}
 		}
 		$Id = $_POST["Id"];
-		$Check = $this->NumQuery("SELECT * FROM dbo.{$CTM[2]} WHERE id='{$Id}'");
+		$Check = $this->NumQuery("SELECT * FROM dbo.CTM_WebFiles WHERE id='{$Id}'");
 
 		if($Check < 1)
 		{
 			die("<div class=\"error-box\"> Este arquivo n&atilde;o existe.</div>");
 		}
 
-		$Query = $this->Query("SELECT * FROM dbo.{$CTM[2]} WHERE id='{$Id}'");
+		$Query = $this->Query("SELECT * FROM dbo.CTM_WebFiles WHERE id='{$Id}'");
 		$Load = $this->FetchArray($Query);
 		
 		$CTM_Template->Set("File_Name", $Load["name"]);
@@ -740,8 +743,6 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Add_Member()
 	{
-		global $CTM;
-		
 		if($_GET["cmd"] == TRUE)
 		{
 			$Account = $_POST["Account"];
@@ -749,7 +750,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			$Contact = $_POST["Contact"];
 			$Type = $_POST["Type"];
 			$Check[0] = $this->NumQuery("SELECT * FROM ".MuAcc_DB.".dbo.MEMB_INFO WHERE memb___id='{$Account}'");
-			$Check[1] = $this->NumQuery("SELECT * FROM ".MuGen_DB.".dbo.Character WHERE Name='{$Name}'");
+			$Check[1] = $this->NumQuery("SELECT * FROM MuOnline.dbo.Character WHERE Name='{$Name}'");
 			
 			if(empty($Account) || empty($Name))
 			{
@@ -772,7 +773,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Add_Poll()
 	{
-		global $CTM_Template, $CTM;
+		global $CTM_Template;
 		
 		if($_GET["cmd"] == TRUE)
 		{
@@ -799,13 +800,13 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("INSERT INTO dbo.{$CTM[15]} (Question,Time_,Expiration,Status) VALUES 
+				$this->Query("INSERT INTO dbo.CTM_WebPoll (Question,Time_,Expiration,Status) VALUES 
 				('{$Question}',".time().",{$Expiration},0xFFFF)");
-				$Find_ID = $this->FetchQuery("SELECT Id=@@IDENTITY FROM dbo.{$CTM[15]} ORDER BY Id DESC");
+				$Find_ID = $this->FetchQuery("SELECT Id=@@IDENTITY FROM dbo.CTM_WebPoll ORDER BY Id DESC");
 				
 				for($WzAG = 0; $WzAG <= $_GET["num"]; $WzAG++)
 				{
-					$this->Query("INSERT INTO dbo.{$CTM[16]} (Poll_ID,Answer,Votes) VALUES
+					$this->Query("INSERT INTO dbo.CTM_WebPollAnswers (Poll_ID,Answer,Votes) VALUES
 					(".$Find_ID[0].",'".base64_encode($_POST["Answer_".$WzAG])."',0)");
 				}
 				die("<div class=\"success-box\"> Enquete adicionada com Sucesso!</div>");
@@ -828,9 +829,9 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Load_Poll()
 	{
-		global $CTM_Template, $CTM;
+		global $CTM_Template;
 		
-		$Check = $this->NumQuery("SELECT * FROM dbo.{$CTM[15]}");
+		$Check = $this->NumQuery("SELECT * FROM dbo.CTM_WebPoll");
 		
 		if($Check < 1)
 		{
@@ -838,7 +839,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 		}
 		else
 		{
-			$Find_Poll = $this->Query("SELECT Question,Id FROM dbo.{$CTM[15]} ORDER BY Id DESC");
+			$Find_Poll = $this->Query("SELECT Question,Id FROM dbo.CTM_WebPoll ORDER BY Id DESC");
 			
 			while($Value = $this->Fetch($Find_Poll))
 			{
@@ -850,11 +851,11 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Manage_Poll()
 	{
-		global $CTM_Template, $CTM;
+		global $CTM_Template;
 		
 		if($_GET["cmd"] == TRUE)
 		{
-			$Check = $this->NumQuery("SELECT * FROM dbo.{$CTM[15]} WHERE Id='".$_POST["Id"]."'");
+			$Check = $this->NumQuery("SELECT * FROM dbo.CTM_WebPoll WHERE Id='".$_POST["Id"]."'");
 			
 			if(empty($_POST["Id"]))
 			{
@@ -866,9 +867,9 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("DELETE FROM dbo.{$CTM[15]} WHERE Id='".$_POST["Id"]."'");
-				$this->Query("DELETE FROM dbo.{$CTM[16]} WHERE Poll_ID='".$_POST["Id"]."'");
-				$this->Query("DELETE FROM dbo.{$CTM[17]} WHERE Poll_ID='".$_POST["Id"]."'");
+				$this->Query("DELETE FROM dbo.CTM_WebPoll WHERE Id='".$_POST["Id"]."'");
+				$this->Query("DELETE FROM dbo.CTM_WebPollAnswers WHERE Poll_ID='".$_POST["Id"]."'");
+				$this->Query("DELETE FROM dbo.CTM_WebPollVotes WHERE Poll_ID='".$_POST["Id"]."'");
 				die("<div class=\"success-box\"> Enquete deletada com Sucesso!");
 			}
 		}
@@ -893,21 +894,21 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			else
 			{
 				$Status = $Status == TRUE ? "0xFFFF" : "0x01E2";
-				$this->Query("UPDATE dbo.{$CTM[15]} SET Question='{$Question}',Expiration='{$Expiration}',Status={$Status}
+				$this->Query("UPDATE dbo.CTM_WebPoll SET Question='{$Question}',Expiration='{$Expiration}',Status={$Status}
 				WHERE Id='{$Id}'");
 				
 				for($WzAG = 0; $WzAG <= $_GET["num"]; $WzAG++)
 				{
-					$this->Query("UPDATE dbo.{$CTM[16]} SET Answer='".base64_encode($_POST["Answer_".$WzAG])."' 
+					$this->Query("UPDATE dbo.CTM_WebPollAnswers SET Answer='".base64_encode($_POST["Answer_".$WzAG])."' 
 					WHERE Id='".$_POST["IdAnswer_".$WzAG]."'");
 				}
 				die("<div class=\"success-box\"> Enquete editada com Sucesso!</div>");
 			}
 		}
-		$Check = $this->NumQuery("SELECT * FROM dbo.{$CTM[15]} WHERE Id='".$_POST["Id"]."'");
-		$Query[0] = $this->Query("SELECT Question,Expiration,Status FROM dbo.{$CTM[15]} WHERE Id='".$_POST["Id"]."'");
-		$Query[1] = $this->Query("SELECT Answer,Id FROM dbo.{$CTM[16]} WHERE Poll_ID='".$_POST["Id"]."'");
-		$Count = $this->NumQuery("SELECT * FROM dbo.{$CTM[16]} WHERE Poll_ID='".$_POST["Id"]."'");
+		$Check = $this->NumQuery("SELECT * FROM dbo.CTM_WebPoll WHERE Id='".$_POST["Id"]."'");
+		$Query[0] = $this->Query("SELECT Question,Expiration,Status FROM dbo.CTM_WebPoll WHERE Id='".$_POST["Id"]."'");
+		$Query[1] = $this->Query("SELECT Answer,Id FROM dbo.CTM_WebPollAnswers WHERE Poll_ID='".$_POST["Id"]."'");
+		$Count = $this->NumQuery("SELECT * FROM dbo.CTM_WebPollAnswers WHERE Poll_ID='".$_POST["Id"]."'");
 		$Poll = $this->FetchArray($Query[0]);
 		
 		if(empty($_POST["Id"]))
@@ -1025,9 +1026,9 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			$Set_Account = $Find_ByAddr[0];
 			break;
 			case 4 :
-			$Check_Exists = $this->NumQuery("SELECT AccountID FROM ".MuGen_DB.".dbo.Character 
+			$Check_Exists = $this->NumQuery("SELECT AccountID FROM MuOnline.dbo.Character 
 			WHERE Name='{$Account}'");
-			$Find_ByChar = $this->FetchQuery("SELECT AccountID FROM ".MuGen_DB.".dbo.Character 
+			$Find_ByChar = $this->FetchQuery("SELECT AccountID FROM MuOnline.dbo.Character 
 			WHERE Name='{$Account}'");
 			$Find_Account = $this->FetchQuery("SELECT memb___id,memb_name,mail_addr,fpas_ques,fpas_answ,tel__numb,bloc_code
 			FROM ".MuAcc_DB.".dbo.MEMB_INFO WHERE memb___id='{$Find_ByChar[0]}'");
@@ -1072,7 +1073,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Ban_Acc()
 	{
-		global $CTM, $_PanelAdmin, $_Mailer;
+		global $_PanelAdmin, $_Mailer;
 		
 		if($_GET["cmd"] == TRUE)
 		{
@@ -1134,7 +1135,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 					{
 						$Character = $this->FetchQuery("SELECT name FROM dbo.CTM_WebStaff WHERE account='".$this->Login."'");
 						
-						$this->Query("INSERT INTO dbo.{$CTM[7]} (Account,Responsible,Reason,Time) VALUES ('{$Account}','{$Character[0]}','{$Reason}',{$Str_Time})");
+						$this->Query("INSERT INTO dbo.CTM_WebAccBan (Account,Responsible,Reason,Time) VALUES ('{$Account}','{$Character[0]}','{$Reason}',{$Str_Time})");
 						$this->Query("UPDATE ".MuAcc_DB.".dbo.MEMB_INFO SET bloc_code=1 WHERE memb___id='{$Account}'");
 						unset($Message);
 						die("<div class=\"success-box\"> Conta <b>{$Account}</b> banida por <b>{$Time} dias</b> com Sucesso!</div>");
@@ -1144,7 +1145,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 				{
 					$Character = $this->FetchQuery("SELECT name FROM dbo.CTM_WebStaff WHERE account='".$this->Login."'");
 					
-					$this->Query("INSERT INTO dbo.{$CTM[7]} (Account,Responsible,Reason,Time) VALUES ('{$Account}','{$Character[0]}','{$Reason}',{$Str_Time})");
+					$this->Query("INSERT INTO dbo.CTM_WebAccBan (Account,Responsible,Reason,Time) VALUES ('{$Account}','{$Character[0]}','{$Reason}',{$Str_Time})");
 					$this->Query("UPDATE ".MuAcc_DB.".dbo.MEMB_INFO SET bloc_code=1 WHERE memb___id='{$Account}'");
 					die("<div class=\"success-box\"> Conta <b>{$Account}</b> banida por <b>{$Time} dias</b> com Sucesso!</div>");
 				}
@@ -1153,7 +1154,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Unban_Acc()
 	{
-		global $CTM_Template, $CTM;
+		global $CTM_Template;
 		
 		if($_GET["cmd"] == TRUE)
 		{
@@ -1170,7 +1171,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("DELETE dbo.{$CTM[7]} WHERE Account='{$Account}'");
+				$this->Query("DELETE dbo.CTM_WebAccBan WHERE Account='{$Account}'");
 				$this->Query("UPDATE ".MuAcc_DB.".dbo.MEMB_INFO SET bloc_code=0 WHERE memb___id='{$Account}'");
 				die("<div class=\"success-box\"> Conta <b>{$Account}</b> desbanida com Sucesso!</div>");
 			}
@@ -1193,7 +1194,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Delete_Account()
 	{
-		global $CTM, $_Ranking;
+		global $_Ranking;
 		
 		if($_GET["cmd"] == TRUE)
 		{
@@ -1223,9 +1224,9 @@ class CTM_PanelAdmin extends CTM_MSSQL
 				$Account = $Find_ByAddr[0];
 				break;
 				case 4 :
-				$Check_Exists = $this->NumQuery("SELECT AccountID FROM ".MuGen_DB.".dbo.Character 
+				$Check_Exists = $this->NumQuery("SELECT AccountID FROM MuOnline.dbo.Character 
 				WHERE Name='{$Account}'");
-				$Find_ByChar = $this->FetchQuery("SELECT AccountID FROM ".MuGen_DB.".dbo.Character 
+				$Find_ByChar = $this->FetchQuery("SELECT AccountID FROM MuOnline.dbo.Character 
 				WHERE Name='{$Account}'");
 				$Check_Message = "Nenhuma conta encontrada com este personagem.";
 				$Account = $Find_ByChar[0];
@@ -1242,72 +1243,72 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$Check_Chars = $this->NumQuery("SELECT * FROM ".MuGen_DB.".dbo.Character WHERE AccountID='{$Account}'");
+				$Check_Chars = $this->NumQuery("SELECT * FROM MuOnline.dbo.Character WHERE AccountID='{$Account}'");
 				
 				if($Check_Chars > 0)
 				{
-					$Chars_Query = $this->Query("SELECT * FROM ".MuGen_DB.".dbo.Character WHERE AccountID='{$Account}'");
+					$Chars_Query = $this->Query("SELECT * FROM MuOnline.dbo.Character WHERE AccountID='{$Account}'");
 					
 					while($Find_Chars = $this->FetchArray($Chars_Query))
 					{
 						$Character = $Find_Chars["Name"];
-						$this->Query("DELETE ".MuGen_DB.".dbo.GuildMember WHERE Name='{$Character}'");
+						$this->Query("DELETE MuOnline.dbo.GuildMember WHERE Name='{$Character}'");
 						
-						$Find_Guild = $this->FetchQuery("SELECT G_Name FROM ".MuGen_DB.".dbo.Guild WHERE G_Master='{$Character}'");
-						$this->Query("DELETE ".MuGen_DB.".dbo.Guild WHERE G_Master='{$Character}'");
-						$this->Query("DELETE ".MuGen_DB.".dbo.GuildMember WHERE G_Name='{$Find_Guild[0]}'");
+						$Find_Guild = $this->FetchQuery("SELECT G_Name FROM MuOnline.dbo.Guild WHERE G_Master='{$Character}'");
+						$this->Query("DELETE MuOnline.dbo.Guild WHERE G_Master='{$Character}'");
+						$this->Query("DELETE MuOnline.dbo.GuildMember WHERE G_Name='{$Find_Guild[0]}'");
 						
 						if(GS_Version > 1)
 						{
-							$this->Query("DELETE ".MuGen_DB.".dbo.T_CGuid WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.T_FriendMain WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.T_FriendMail WHERE FriendName='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.T_FriendList WHERE FriendName='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.T_WaitFriend WHERE FriendName='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.T_CGuid WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.T_FriendMain WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.T_FriendMail WHERE FriendName='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.T_FriendList WHERE FriendName='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.T_WaitFriend WHERE FriendName='{$Character}'");
 						}
 						if(@Server_Files == 0)
 						{
-							$this->Query("DELETE ".MuGen_DB.".dbo.OptionData WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.T_MasterLevelSystem WHERE CHAR_NAME='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.OptionData WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.T_MasterLevelSystem WHERE CHAR_NAME='{$Character}'");
 							if($_Ranking["Gens"]["Enable"] === TRUE)
 							{
-								$this->Query("DELETE ".MuGen_DB.".dbo.T_GensSystem WHERE CHAR_NAME='{$Character}'");
+								$this->Query("DELETE MuOnline.dbo.T_GensSystem WHERE CHAR_NAME='{$Character}'");
 							}
 						}
 						if(@Server_Files == 1)
 						{
-							$this->Query("DELETE ".MuGen_DB.".dbo.OptionData WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.OptionData WHERE Name='{$Character}'");
 						}
 						if(@Server_Files == 2)
 						{
-							$this->Query("DELETE ".MuGen_DB.".dbo.OptionData WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.QuestWorld WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.QuestKillCount WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.RankingBloodCastle WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.RankingDevilSquare WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.RankingChaosCastle WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.RankingIllusionTemple WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.RankingDuel WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.Gens_Rank WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.Gens_Reward WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.EventSantaClaus WHERE Name='{$Character}'");
-							$this->Query("DELETE ".MuGen_DB.".dbo.EventLeoTheHelper WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.OptionData WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.QuestWorld WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.QuestKillCount WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.RankingBloodCastle WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.RankingDevilSquare WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.RankingChaosCastle WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.RankingIllusionTemple WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.RankingDuel WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.Gens_Rank WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.Gens_Reward WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.EventSantaClaus WHERE Name='{$Character}'");
+							$this->Query("DELETE MuOnline.dbo.EventLeoTheHelper WHERE Name='{$Character}'");
 						}
-						@unlink(constant("Upload_Img")."/".$Find_Chars[$CTM[C][0]]);
-						$this->Query("DELETE ".MuGen_DB.".dbo.Character WHERE Name='{$Character}'");
+						@unlink(constant("Upload_Img")."/".$Find_Chars["CTM_Image"]);
+						$this->Query("DELETE MuOnline.dbo.Character WHERE Name='{$Character}'");
 					}
-					$this->Query("DELETE ".MuGen_DB.".dbo.AccountCharacter WHERE Id='{$Account}'");
+					$this->Query("DELETE MuOnline.dbo.AccountCharacter WHERE Id='{$Account}'");
 				}
-				$this->Query("DELETE ".MuGen_DB.".dbo.warehouse WHERE AccountID='{$Account}'");
+				$this->Query("DELETE MuOnline.dbo.warehouse WHERE AccountID='{$Account}'");
 				$this->Query("DELETE ".MuAcc_DB.".dbo.MEMB_STAT WHERE memb___id='{$Account}'");
 				
 				if(VI_CURR_INFO == TRUE)
 				{
-					$this->Query("DELETE ".MuGen_DB.".dbo.VI_CURR_INFO WHERE memb___id='{$Account}'");
+					$this->Query("DELETE MuOnline.dbo.VI_CURR_INFO WHERE memb___id='{$Account}'");
 				}
 				if(ExtWarehouse == TRUE)
 				{
-					$this->Query("DELETE ".MuGen_DB.".dbo.".ExtWare_Table." WHERE ".ExtWare_Login."='{$Account}'");
+					$this->Query("DELETE MuOnline.dbo.".ExtWare_Table." WHERE ".ExtWare_Login."='{$Account}'");
 				}
 				if(VIP_Table != "MEMB_INFO")
 				{
@@ -1454,7 +1455,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			{
 				$Cmd_Query = $Character[1] == $_ClassType["DL"][0] || $Character[1] == $_ClassType["LE"][0] || 
 				$Character[1] == $_ClassType["LE2"][0] ? ",".Column_Cmd."='{$Command}'" : NULL;			
-				$this->Query("UPDATE ".MuGen_DB.".dbo.Character SET 
+				$this->Query("UPDATE MuOnline.dbo.Character SET 
 				cLevel='{$Level}',Class='{$Class}',LevelUpPoint='{$Points}',Experience='{$Experience}',
 				Strength='{$Strength}',Dexterity='{$Dexterity}',Vitality='{$Vitality}',Energy='{$Energy}'{$Cmd_Query},
 				Money='{$Money}',MapNumber='{$MapNumber}',MapPosX='{$MapPosX}',MapPosY='{$MapPosY}',PkCount='{$PkCount}',
@@ -1465,15 +1466,15 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 		}
 		$Character = $_POST["Character"];
-		$Check_Exists = $this->NumQuery("SELECT * FROM ".MuGen_DB.".dbo.Character WHERE Name='{$Character}'");
+		$Check_Exists = $this->NumQuery("SELECT * FROM MuOnline.dbo.Character WHERE Name='{$Character}'");
 		$Query_Char = $this->Query("SELECT AccountID,Name,cLevel,Class,LevelUpPoint,Experience,
 		Strength,Dexterity,Vitality,Energy,Money,MapNumber,MapPosX,MapPosY,PkCount,PkTime,CtlCode,
 		".Column_Reset.",".Column_ResetDay.",".Column_ResetWeek.",".Column_ResetMonth.",".Column_MReset." 
-		FROM ".MuGen_DB.".dbo.Character WHERE Name='{$Character}'");
+		FROM MuOnline.dbo.Character WHERE Name='{$Character}'");
 		$Find_Char = $this->FetchArray($Query_Char);
 		$Find_Command = $Find_Char[3] == $_ClassType["DL"][0] || $Find_Char[3] == $_ClassType["LE"][0] ||
 		$Find_Char[3] == $_ClassType["LE2"][0] ?
-		$this->FetchQuery("SELECT ".Column_Cmd." FROM ".MuGen_DB.".dbo.Character WHERE Name='{$Character}'") : NULL;
+		$this->FetchQuery("SELECT ".Column_Cmd." FROM MuOnline.dbo.Character WHERE Name='{$Character}'") : NULL;
 		
 		if(empty($Character))
 		{
@@ -1519,13 +1520,16 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Ban_Char()
 	{
+		global $_PanelAdmin, $_Mailer;
+		
 		if($_GET["cmd"] == TRUE)
 		{
 			$Character = $_POST["Character"];
 			$Time = $_POST["Time"];
 			$Reason = base64_encode($_POST["Reason"]);
-			$Check[0] = $this->NumQuery("SELECT * FROM ".MuGen_DB.".dbo.Character WHERE Name='{$Character}'");
-			$Check[1] = $this->FetchQuery("SELECT CtlCode,AccountID FROM ".MuGen_DB.".dbo.Character WHERE Name='{$Character}'");
+			$Check[0] = $this->NumQuery("SELECT * FROM MuOnline.dbo.Character WHERE Name='{$Character}'");
+			$Check[1] = $this->FetchQuery("SELECT CtlCode,AccountID FROM MuOnline.dbo.Character WHERE Name='{$Character}'");
+			$Find_Account = $this->FetchQuery("SELECT memb_name,mail_addr FROM ".MuAcc_DB.".dbo.MEMB_INFO WHERE memb___id='".$Check[1][1]."'");
 			
 			if(empty($Character) || empty($Time) || empty($Reason))
 			{
@@ -1539,24 +1543,72 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			{
 				die("<div class=\"error-box\"> Este char se encontra banido.</div>");
 			}
+			else
+			{
+				$Str_Time = strtotime("+ {$Time} days");
+				$Date = date("d/m/Y", $Str_Time);
+				$Hour = date("H:i", $Str_Time);
+				/****************************** Send Mail *******************************/
+				if($_PanelAdmin["Characters"]["Ban"]["Send_Mail"] === TRUE)
+				{
+					$Message .= "Ol&aacute; <strong>".$Find_Account[0]."</strong>!<br /><br />";
+					$Message .= "Voc&ecirc; cometeu um ato foras das regras do servidor,";
+					$Message .= "<br />Devido a este motivo seu personagem esta banido, informa&ccedil;&otilde;es:<br /><br />";
+					$Message .= "<strong>Login:</strong> ".$Check[1][1]."<br />";
+					$Message .= "<strong>Personagem:</strong> ".$Character."<br />";
+					$Message .= "<strong>Motivo:</strong> ".utf8_decode(base64_decode($Reason))."<br />";
+					$Message .= "<strong>Tempo:</strong> ".$Time." Dias<br />";
+					$Message .= "<strong>Expira&ccedil;&atilde;o:</strong> ".$Date." as ".$Hour."<br />";
+					$Message .= "<br />";
+					$Message .= "N&atilde;o cometa o mesmo erro novamente.<br />";
+					$Message .= "Caso tenha sido banido injustamente entre em contato.<br /><br />";
+				
+					$CTM_Mailer = new CTM_Mailer();
+					$CTM_Mailer->SMTP_Server = $_Mailer["SMTP"]["Server"];
+					$CTM_Mailer->SMTP_Port = $_Mailer["SMTP"]["Port"];
+					$CTM_Mailer->SMTP_User = $_Mailer["SMTP"]["User"];
+					$CTM_Mailer->SMTP_Pass = $_Mailer["SMTP"]["Pass"];
+					$CTM_Mailer->Mail_From = $_Mailer["SMTP"]["Mail"];
+					$CTM_Mailer->SMTP_Debug = $_Mailer["SMTP"]["Debug"];
+					$CTM_Mailer->Mail_To = $Find_Account[1];
+					$CTM_Mailer->Mail_Sender = "Suporte ".constant("Server_Name");
+					$CTM_Mailer->Mail_Recipient = $Find_Account[0];
+					$CTM_Mailer->Mail_Subject = utf8_decode("Seu personagem foi banido - ".constant("Server_Name"));
+					$CTM_Mailer->Mail_Message = $Message;
+				
+					if($CTM_Mailer->Send_Mail() == FALSE)
+					{
+						die("<div class=\"error-box\"> Erro ao enviar o E-Mail!</div>");
+					}
+					else
+					{
+						$Character_S = $this->FetchQuery("SELECT name FROM dbo.CTM_WebStaff WHERE account='".$this->Login."'");
+						
+						$this->Query("INSERT INTO dbo.CTM_WebCharBan (Character,Responsible,[Time],Reason) VALUES ('{$Character}','{$Character_S[0]}',".strtotime("+ {$Time} days").",'{$Reason}')");
+						$this->Query("UPDATE MuOnline.dbo.Character SET CtlCode=1 WHERE Name='{$Character}'");
+						unset($Message);
+						die("<div class=\"success-box\"> Char <b>{$Character}</b> banido por <b>{$Time} dias</b> com Sucesso!</div>");
+					}
+				}
 				else
 				{
 					$Character_S = $this->FetchQuery("SELECT name FROM dbo.CTM_WebStaff WHERE account='".$this->Login."'");
 					
-					$this->Query("INSERT INTO dbo.CTM_WebCharBan (Character,Responsible,[Time],Reason) VALUES ('{$Character}','{$Character_S[0]}',".strtotime("+ ".$_POST['Time']." days").",'{$Reason}')");
-					$this->Query("UPDATE ".MuGen_DB.".dbo.Character SET CtlCode=1 WHERE Name='{$Character}'");
+					$this->Query("INSERT INTO dbo.CTM_WebCharBan (Character,Responsible,[Time],Reason) VALUES ('{$Character}','{$Character_S[0]}',".strtotime("+ {$Time} days").",'{$Reason}')");
+					$this->Query("UPDATE MuOnline.dbo.Character SET CtlCode=1 WHERE Name='{$Character}'");
 					die("<div class=\"success-box\"> Char <b>{$Character}</b> banido por <b>{$Time} dias</b> com Sucesso!</div>");
 				}
+			}
 		}
 	}
 	private function Unban_Char()
 	{
-		global $CTM_Template, $CTM;
+		global $CTM_Template;
 		
 		if($_GET["cmd"] == TRUE)
 		{
 			$Character = $_POST["Character"];
-			$Check = $this->FetchQuery("SELECT CtlCode FROM ".MuGen_DB.".dbo.Character WHERE Name='{$Character}'");
+			$Check = $this->FetchQuery("SELECT CtlCode FROM MuOnline.dbo.Character WHERE Name='{$Character}'");
 			
 			if(empty($Character))
 			{
@@ -1568,19 +1620,19 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("DELETE dbo.{$CTM[8]} WHERE Character='{$Character}'");
-				$this->Query("UPDATE ".MuGen_DB.".dbo.Character SET CtlCode=0 WHERE Name='{$Character}'");
+				$this->Query("DELETE dbo.CTM_WebCharBan WHERE Character='{$Character}'");
+				$this->Query("UPDATE MuOnline.dbo.Character SET CtlCode=0 WHERE Name='{$Character}'");
 				die("<div class=\"success-box\"> Char <b>{$Character}</b> desbanido com Sucesso!</div>");
 			}
 		}
-		$Check = $this->FetchQuery("SELECT count(*) FROM ".MuGen_DB.".dbo.Character WHERE CtlCode=1");
+		$Check = $this->FetchQuery("SELECT count(*) FROM MuOnline.dbo.Character WHERE CtlCode=1");
 
 		if($Check[0] < 1)
 		{
 			die("<div class=\"info-box\"> N&atilde;o h&aacute; chars banidos no momento.</div>");
 		}
 
-		$Query = $this->Query("SELECT Name FROM ".MuGen_DB.".dbo.Character WHERE CtlCode=1");
+		$Query = $this->Query("SELECT Name FROM MuOnline.dbo.Character WHERE CtlCode=1");
 		
 		while($Load = $this->Fetch($Query))
 		{
@@ -1591,16 +1643,16 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Delete_Character()
 	{
-		global $CTM, $_Ranking;
+		global $_Ranking;
 		
 		if($_GET["cmd"] == TRUE)
 		{
 			$Character = $_POST["Character"];
 			$Guild = $_POST["Delete_Guild"];
-			$Check[0] = $this->NumQuery("SELECT * FROM ".MuGen_DB.".dbo.Character WHERE Name='{$Character}'");
-			$Check[1] = $this->NumQuery("SELECT * FROM ".MuGen_DB.".dbo.Guild WHERE G_Master='{$Character}'");
-			$Find_Char = $this->FetchQuery("SELECT AccountID,{$CTM[C][0]} FROM ".MuGen_DB.".dbo.Character WHERE Name='{$Character}'");
-			$Find_Query = $this->Query("SELECT * FROM ".MuGen_DB.".dbo.AccountCharacter WHERE Id='".$Find_Char[0]."'");
+			$Check[0] = $this->NumQuery("SELECT * FROM MuOnline.dbo.Character WHERE Name='{$Character}'");
+			$Check[1] = $this->NumQuery("SELECT * FROM MuOnline.dbo.Guild WHERE G_Master='{$Character}'");
+			$Find_Char = $this->FetchQuery("SELECT AccountID,CTM_Image FROM MuOnline.dbo.Character WHERE Name='{$Character}'");
+			$Find_Query = $this->Query("SELECT * FROM MuOnline.dbo.AccountCharacter WHERE Id='".$Find_Char[0]."'");
 			$Find_Game = $this->FetchArray($Find_Query);
 		
 			if($Find_Game["GameID1"] == $Character) { $GameID = "GameID1"; }
@@ -1623,52 +1675,52 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("UPDATE ".MuGen_DB.".dbo.AccountCharacter SET ".$GameID."=NULL WHERE Id='{$Find_Char[0]}'");
-				$this->Query("DELETE ".MuGen_DB.".dbo.GuildMember WHERE Name='{$Character}'");
+				$this->Query("UPDATE MuOnline.dbo.AccountCharacter SET ".$GameID."=NULL WHERE Id='{$Find_Char[0]}'");
+				$this->Query("DELETE MuOnline.dbo.GuildMember WHERE Name='{$Character}'");
 				if($Guild == TRUE)
 				{
-					$Find_Guild = $this->FetchQuery("SELECT G_Name FROM ".MuGen_DB.".dbo.Guild WHERE G_Master='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.Guild WHERE G_Master='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.GuildMember WHERE G_Name='{$Find_Guild[0]}'");
+					$Find_Guild = $this->FetchQuery("SELECT G_Name FROM MuOnline.dbo.Guild WHERE G_Master='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.Guild WHERE G_Master='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.GuildMember WHERE G_Name='{$Find_Guild[0]}'");
 				}
 				if(GS_Version > 1)
 				{
-					$this->Query("DELETE ".MuGen_DB.".dbo.T_CGuid WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.T_FriendMain WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.T_FriendMail WHERE FriendName='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.T_FriendList WHERE FriendName='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.T_WaitFriend WHERE FriendName='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.T_CGuid WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.T_FriendMain WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.T_FriendMail WHERE FriendName='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.T_FriendList WHERE FriendName='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.T_WaitFriend WHERE FriendName='{$Character}'");
 				}
 				if(@Server_Files == 0)
 				{
-					$this->Query("DELETE ".MuGen_DB.".dbo.OptionData WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.T_MasterLevelSystem WHERE CHAR_NAME='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.OptionData WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.T_MasterLevelSystem WHERE CHAR_NAME='{$Character}'");
 					if($_Ranking["Gens"]["Enable"] === TRUE)
 					{
-						$this->Query("DELETE ".MuGen_DB.".dbo.T_GensSystem WHERE CHAR_NAME='{$Character}'");
+						$this->Query("DELETE MuOnline.dbo.T_GensSystem WHERE CHAR_NAME='{$Character}'");
 					}
 				}
 				if(@Server_Files == 1)
 				{
-					$this->Query("DELETE ".MuGen_DB.".dbo.OptionData WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.OptionData WHERE Name='{$Character}'");
 				}
 				if(@Server_Files == 2)
 				{
-					$this->Query("DELETE ".MuGen_DB.".dbo.OptionData WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.QuestWorld WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.QuestKillCount WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.RankingBloodCastle WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.RankingDevilSquare WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.RankingChaosCastle WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.RankingIllusionTemple WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.RankingDuel WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.Gens_Rank WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.Gens_Reward WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.EventSantaClaus WHERE Name='{$Character}'");
-					$this->Query("DELETE ".MuGen_DB.".dbo.EventLeoTheHelper WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.OptionData WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.QuestWorld WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.QuestKillCount WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.RankingBloodCastle WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.RankingDevilSquare WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.RankingChaosCastle WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.RankingIllusionTemple WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.RankingDuel WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.Gens_Rank WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.Gens_Reward WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.EventSantaClaus WHERE Name='{$Character}'");
+					$this->Query("DELETE MuOnline.dbo.EventLeoTheHelper WHERE Name='{$Character}'");
 				}
 				@unlink(constant("Upload_Img")."/".$Find_Char[1]);
-				$this->Query("DELETE ".MuGen_DB.".dbo.Character WHERE Name='{$Character}'");
+				$this->Query("DELETE MuOnline.dbo.Character WHERE Name='{$Character}'");
 				die("<div class=\"success-box\"> Personagem deletado com Sucesso!</div>");
 			}
 		}
@@ -1725,14 +1777,14 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	/****************************************/
 	private function List_Tickets()
 	{
-		global $CTM_Template, $CTM;
+		global $CTM_Template;
 		
 		echo("<script type=\"text/javascript\" src=\"modules/javascripts/SpryTabbedPanels.js\"></script>
 		<style type=\"text/css\"> @import url('modules/css/SpryTabbedPanels.css'); </style>");
 		
-		$Query[0] = $this->Query("SELECT * FROM dbo.{$CTM[3]} WHERE Status=0 ORDER BY Id DESC");
-		$Query[1] = $this->Query("SELECT * FROM dbo.{$CTM[3]} WHERE Status=1 or Status=2 ORDER BY Id DESC");
-		$Query[2] = $this->Query("SELECT * FROM dbo.{$CTM[3]} WHERE Status=3 ORDER BY Id DESC");
+		$Query[0] = $this->Query("SELECT * FROM dbo.CTM_WebTickets WHERE Status=0 ORDER BY Id DESC");
+		$Query[1] = $this->Query("SELECT * FROM dbo.CTM_WebTickets WHERE Status=1 or Status=2 ORDER BY Id DESC");
+		$Query[2] = $this->Query("SELECT * FROM dbo.CTM_WebTickets WHERE Status=3 ORDER BY Id DESC");
 		$Check[0] = $this->NumRow($Query[0]);
 		$Check[1] = $this->NumRow($Query[1]);
 		$Check[2] = $this->NumRow($Query[2]);
@@ -1851,11 +1903,11 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Suportt_Tickets()
 	{
-		global $CTM_General, $CTM_Template, $CTM, $_PanelAdmin;
+		global $CTM_Template, $_PanelAdmin;
 		$CTM_BBCode = new CTM_BBCode();
 		
 		$Id = $_GET["id"];
-		$Query = $this->Query("SELECT * FROM dbo.{$CTM[3]} WHERE Id='{$Id}'");
+		$Query = $this->Query("SELECT * FROM dbo.CTM_WebTickets WHERE Id='{$Id}'");
 		$Check = $this->NumRow($Query);
 
 		if($Check < 1)
@@ -1875,21 +1927,21 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("INSERT INTO dbo.{$CTM[9]} (Date,Character,TicketID,Text) VALUES(".strtotime("now").",'{$Character[0]}',{$Id},'{$Text}')");
-				$this->Query("UPDATE dbo.{$CTM[3]} SET Status=1 WHERE Id='{$Id}'");
+				$this->Query("INSERT INTO dbo.CTM_WebTicketRes (Date,Character,TicketID,Text) VALUES(".strtotime("now").",'{$Character[0]}',{$Id},'{$Text}')");
+				$this->Query("UPDATE dbo.CTM_WebTickets SET Status=1 WHERE Id='{$Id}'");
 				die("<div class=\"success-box\"> Resposta enviada com Sucesso</div>");
 			}
 		}
 		if($_GET["cmd"] == "open")
 		{
 			$Id = $_GET["id"];
-			$this->Query("UPDATE dbo.{$CTM[3]} SET Status=0 WHERE Id='{$Id}'");
+			$this->Query("UPDATE dbo.CTM_WebTickets SET Status=0 WHERE Id='{$Id}'");
 			die("<div class=\"success-box\"> Ticket Aberto com Sucesso!</div>");
 		}
 		if($_GET["cmd"] == "close")
 		{
 			$Id = $_GET["id"];
-			$this->Query("UPDATE dbo.{$CTM[3]} SET Status=3 WHERE Id='{$Id}'");
+			$this->Query("UPDATE dbo.CTM_WebTickets SET Status=3 WHERE Id='{$Id}'");
 			die("<div class=\"success-box\"> Ticket Fechado com Sucesso!</div>");
 		}
 		if($_GET["cmd"] == "delete")
@@ -1900,15 +1952,15 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("DELETE dbo.{$CTM[3]} WHERE Id='{$Id}'");
-				$this->Query("DELETE dbo.{$CTM[9]} WHERE TicketID='{$Id}'");
+				$this->Query("DELETE dbo.CTM_WebTickets WHERE Id='{$Id}'");
+				$this->Query("DELETE dbo.CTM_WebTicketRes WHERE TicketID='{$Id}'");
 				die("<div class=\"success-box\"> Ticket deletado com Sucesso!</div>");
 			}
 		}
 		$Load = $this->FetchArray($Query);
-		$Image = $CTM_General->Image($Load["Character"]);
+		$Image = CTM_General::getInstance()->Image($Load["Character"]);
 
-		$Resp_Query = $this->Query("SELECT Date,Character,Text FROM dbo.{$CTM[9]} WHERE TicketID='{$Id}' ORDER BY Id DESC");
+		$Resp_Query = $this->Query("SELECT Date,Character,Text FROM dbo.CTM_WebTicketRes WHERE TicketID='{$Id}' ORDER BY Id DESC");
 
 		switch($Load["Status"])
 		{
@@ -1922,7 +1974,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 		
 		while($Resp = $this->Fetch($Resp_Query))
 		{
-			$New_Img = $CTM_General->Image($Resp[1]);
+			$New_Img = CTM_General::getInstance()->Image($Resp[1]);
 			$Staff = $this->NumQuery("SELECT Name FROM dbo.CTM_WebStaff WHERE Name='{$Resp[1]}'");
 			$Ticket = $Staff > 0 ? " style=\"background-color:#CFE6FF\"" : NULL;
 			$Return .= "<blockquote{$Ticket}>
@@ -1959,13 +2011,13 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Payments()
 	{
-		global $CTM_Template, $CTM;
+		global $CTM_Template;
 		
 		echo("<script type=\"text/javascript\" src=\"modules/javascripts/SpryTabbedPanels.js\"></script>
 		<style type=\"text/css\"> @import url('modules/css/SpryTabbedPanels.css'); </style>\n\r");
 		
-		$Query[0] = $this->Query("SELECT * FROM dbo.{$CTM[10]} WHERE Status < 1 ORDER BY Id DESC");
-		$Query[1] = $this->Query("SELECT * FROM dbo.{$CTM[10]} WHERE Status > 0 ORDER BY Id DESC");
+		$Query[0] = $this->Query("SELECT * FROM dbo.CTM_WebPayments WHERE Status < 1 ORDER BY Id DESC");
+		$Query[1] = $this->Query("SELECT * FROM dbo.CTM_WebPayments WHERE Status > 0 ORDER BY Id DESC");
 		$Check[0] = $this->NumRow($Query[0]);
 		$Check[1] = $this->NumRow($Query[1]);
 		
@@ -2043,11 +2095,11 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function Manage_Payment()
 	{
-		global $CTM_General, $CTM_Template, $CTM, $_PanelAdmin;
+		global $CTM_Template, $_PanelAdmin;
 		$CTM_BBCode = new CTM_BBCode();
 		
 		$Id = $_GET["id"];
-		$Query = $this->Query("SELECT * FROM dbo.{$CTM[10]} WHERE Id='{$Id}'");
+		$Query = $this->Query("SELECT * FROM dbo.CTM_WebPayments WHERE Id='{$Id}'");
 		$Check = $this->NumRow($Query);
 
 		if($Check < 1)
@@ -2067,14 +2119,14 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("INSERT INTO dbo.{$CTM[11]} (Date,Character,PaymentID,Text) VALUES(".strtotime("now").",'{$Character[0]}',{$Id},'{$Text}')");
+				$this->Query("INSERT INTO dbo.CTM_WebPaymentRes (Date,Character,PaymentID,Text) VALUES(".strtotime("now").",'{$Character[0]}',{$Id},'{$Text}')");
 				die("<div class=\"success-box\"> Resposta enviada com Sucesso</div>");
 			}
 		}
 		if($_GET["cmd"] == "confirm")
 		{
 			$Id = $_GET["id"];
-			$Payment = $this->FetchQuery("SELECT Golds,Account,Status FROM dbo.{$CTM[10]} WHERE Id='{$Id}'");
+			$Payment = $this->FetchQuery("SELECT Golds,Account,Status FROM dbo.CTM_WebPayments WHERE Id='{$Id}'");
 			
 			if($Payment[2] == 1)
 			{
@@ -2088,18 +2140,18 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			{
 				if($_PanelAdmin["Payment"]["Auto_Credit"] == TRUE)
 				{
-					$CTM_General->Check_Coin_Table($Payment[1]);
+					CTM_General::getInstance()->Check_Coin_Table($Payment[1]);
 					$this->Query("UPDATE ".GL_DB.".dbo.".GL_Table." SET ".GL_Column_1."=".GL_Column_1."+{$Payment[0]} WHERE ".GL_Login."='{$Payment[1]}'");
 				}
 				$Credit = $_PanelAdmin["Payment"]["Auto_Credit"] == TRUE ? "<br />Creditado <b>{$Payment[0]} ".Gold."</b> na conta <b>{$Payment[1]}</b>" : NULL;
-				$this->Query("UPDATE dbo.{$CTM[10]} SET Status=1 WHERE Id='{$Id}'");
+				$this->Query("UPDATE dbo.CTM_WebPayments SET Status=1 WHERE Id='{$Id}'");
 				die("<div class=\"success-box\"> Pagamento Confirmado com Sucesso!{$Credit}</div>");
 			}
 		}
 		if($_GET["cmd"] == "rejet")
 		{
 			$Id = $_GET["id"];
-			$Payment = $this->FetchQuery("SELECT Status FROM dbo.{$CTM[10]} WHERE Id='{$Id}'");
+			$Payment = $this->FetchQuery("SELECT Status FROM dbo.CTM_WebPayments WHERE Id='{$Id}'");
 			
 			if($Payment[0] == 1)
 			{
@@ -2111,7 +2163,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("UPDATE dbo.{$CTM[10]} SET Status=2 WHERE Id='{$Id}'");
+				$this->Query("UPDATE dbo.CTM_WebPayments SET Status=2 WHERE Id='{$Id}'");
 				die("<div class=\"success-box\"> Pagamento Rejeitado com Sucesso!</div>");
 			}
 		}
@@ -2123,15 +2175,15 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			}
 			else
 			{
-				$this->Query("DELETE dbo.{$CTM[10]} WHERE Id='{$Id}'");
-				$this->Query("DELETE dbo.{$CTM[11]} WHERE PaymentID='{$Id}'");
+				$this->Query("DELETE dbo.CTM_WebPayments WHERE Id='{$Id}'");
+				$this->Query("DELETE dbo.CTM_WebPaymentRes WHERE PaymentID='{$Id}'");
 				die("<div class=\"success-box\"> Pagamento deletado com Sucesso!</div>");
 			}
 		}
 		$Load = $this->FetchArray($Query);
-		$Image = $CTM_General->Image($Load["Character"]);
+		$Image = CTM_General::getInstance()->Image($Load["Character"]);
 
-		$Resp_Query = $this->Query("SELECT Date,Character,Text FROM dbo.{$CTM[11]} WHERE PaymentID='{$Id}' ORDER BY Id DESC");
+		$Resp_Query = $this->Query("SELECT Date,Character,Text FROM dbo.CTM_WebPaymentRes WHERE PaymentID='{$Id}' ORDER BY Id DESC");
 
 		switch($Load["Status"])
 		{
@@ -2142,7 +2194,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 		
 		while($Resp = $this->Fetch($Resp_Query))
 		{
-			$New_Img = $CTM_General->Image($Resp[1]);
+			$New_Img = CTM_General::getInstance()->Image($Resp[1]);
 			$Staff = $this->NumQuery("SELECT Name FROM dbo.CTM_WebStaff WHERE Name='{$Resp[1]}'");
 			$Payment = $Staff > 0 ? " style=\"background-color:#CFE6FF\"" : NULL;
 			$Return .= "<blockquote{$Payment}>
@@ -2189,7 +2241,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			$Type = $_POST["Type"];
 			$Time = $_POST["Time"];
 			
-			$findAccount = $this->Query("SELECT AccountID FROM ".MuGen_DB.".dbo.Character WHERE Name = '{$Account}' OR AccountID='{$Account}'");
+			$findAccount = $this->Query("SELECT AccountID FROM MuOnline.dbo.Character WHERE Name = '{$Account}' OR AccountID='{$Account}'");
 			$rows = $this->NumRow($findAccount);
 			$login = $this->Fetch($findAccount);
 			
@@ -2345,7 +2397,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			$Account = $_POST["Account"];
 			$Type = $_POST["Type"];
 			
-			$findAccount = $this->Query("SELECT AccountID FROM ".MuGen_DB.".dbo.Character WHERE Name = '{$Account}' OR AccountID='{$Account}'");
+			$findAccount = $this->Query("SELECT AccountID FROM MuOnline.dbo.Character WHERE Name = '{$Account}' OR AccountID='{$Account}'");
 			$rows = $this->NumRow($findAccount);
 			$login = $this->Fetch($findAccount);
 			
@@ -2376,7 +2428,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 		{
 			$Account = $_POST["Account"];
 			
-			$findAccount = $this->Query("SELECT AccountID FROM ".MuGen_DB.".dbo.Character WHERE Name = '{$Account}' OR AccountID='{$Account}'");
+			$findAccount = $this->Query("SELECT AccountID FROM MuOnline.dbo.Character WHERE Name = '{$Account}' OR AccountID='{$Account}'");
 			$rows = $this->NumRow($findAccount);
 			$login = $this->Fetch($findAccount);
 			
@@ -2431,15 +2483,13 @@ class CTM_PanelAdmin extends CTM_MSSQL
 	}
 	private function addCashs()
 	{
-		global $CTM_General;
-		
 		if($_GET["cmd"] == TRUE)
 		{
 			$Account = $_POST["Account"];
 			$Coin = $_POST["Coin"];
 			$Cash = $_POST["Cash"];
 			
-			$findAccount = $this->Query("SELECT AccountID FROM ".MuGen_DB.".dbo.Character WHERE Name = '{$Account}' OR AccountID = '{$Account}'");
+			$findAccount = $this->Query("SELECT AccountID FROM MuOnline.dbo.Character WHERE Name = '{$Account}' OR AccountID = '{$Account}'");
 			$rows = $this->NumRow($findAccount);
 			$login = $this->Fetch($findAccount);
 			
@@ -2466,7 +2516,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
                                   $this->Query("INSERT INTO logsAdministrativos (Account,Quantidade) VALUES ('{$Account}', '{$Cash}')");
                                   echo("<div class=\"success-box\"><b>Gravando LOG's</b></div>");
                                   }
-				$CTM_General->Check_Coin_Table($login[0]);
+				CTM_General::getInstance()->Check_Coin_Table($login[0]);
 				$this->Query("UPDATE ".GL_DB.".dbo.".GL_Table." SET ".constant("GL_Column_".$Coin)."=".constant("GL_Column_".$Coin)."+{$Cash} WHERE ".GL_Login."='{$login[0]}'");
 				die("<div class=\"success-box\"> Adicionado <b>{$Cash} ".constant("Coin_".$Coin)."</b> na conta <b>{$Account}</b></div>");
 			}
@@ -2480,7 +2530,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
 			$Cash = $_POST["Cash"];
 			$Coin = $_POST["Coin"];
 			
-			$findAccount = $this->Query("SELECT AccountID FROM ".MuGen_DB.".dbo.Character WHERE Name = '{$Account}' OR AccountID = '{$Account}'");
+			$findAccount = $this->Query("SELECT AccountID FROM MuOnline.dbo.Character WHERE Name = '{$Account}' OR AccountID = '{$Account}'");
 			$rows = $this->NumRow($findAccount);
 			$login = $this->Fetch($findAccount);
 			
@@ -2523,7 +2573,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
                $nomeEvento = self::nomeEvento($Evento);
                $cashEvento = self::setCashs($Evento);
                
-               $findAccount = $this->Query("SELECT AccountID,Name FROM ".MuGen_DB.".dbo.Character WHERE Name = '{$Account}' OR AccountID = '{$Account}'");
+               $findAccount = $this->Query("SELECT AccountID,Name FROM MuOnline.dbo.Character WHERE Name = '{$Account}' OR AccountID = '{$Account}'");
                $rows = $this->NumRow($findAccount);
 	       $login = $this->Fetch($findAccount);
                $findLimite = $this->Query("SELECT limite,name FROM CTM_WebStaff where account='{$this->Login}'");
@@ -2709,7 +2759,7 @@ class CTM_PanelAdmin extends CTM_MSSQL
                $Nome = filter_input(INPUT_POST, 'Nome', FILTER_UNSAFE_RAW);
                $Cargo = filter_input(INPUT_POST, 'Cargo', FILTER_UNSAFE_RAW);
                
-               $findAccount = $this->Query("SELECT memb___id FROM ".MuGen_DB.".dbo.MEMB_INFO WHERE memb___id = '{$Account}'");
+               $findAccount = $this->Query("SELECT memb___id FROM MuOnline.dbo.MEMB_INFO WHERE memb___id = '{$Account}'");
                $rows = $this->NumRow($findAccount);
                
                if(empty($Account) || empty($Nome)){die("<div class=\"warning-box\">Digite o Loguim/Nome</div>");}
