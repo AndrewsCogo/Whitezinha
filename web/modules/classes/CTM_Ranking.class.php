@@ -312,7 +312,8 @@ class CTM_Ranking
     }
     private function getRankingGuild($Top)
     {
-                $Query = CTM_MSSQL::getInstance()->Query("SELECT TOP {$Top} G_Name,G_Score,G_Mark FROM MuOnline.dbo.Guild ORDER BY G_Score DESC");
+                $Select = sprintf_s("SELECT TOP %s G_Name,G_Score,G_Mark FROM MuOnline.dbo.Guild ORDER BY G_Score DESC", $Top);
+                $Query = CTM_MSSQL::getInstance()->Query($Select);
 		$Check = CTM_MSSQL::getInstance()->NumRow($Query);
 			
 		if($Check < 1)
@@ -398,8 +399,9 @@ class CTM_Ranking
                             $Tipo = 'charHoras';
                         break;
             }
-                    $query = CTM_MSSQL::getInstance()->Query('SELECT top '.$Top.' name as charName, '.$Table.' as '.$Tipo.', CTM_Image FROM MuOnline.[dbo].[Character] 
-                    '.$where.' order by '.$Table.' desc, cLevel desc'); 
+                    $Select = sprintf_s("SELECT top %s name as charName, %s as %s, CTM_Image FROM MuOnline.[dbo].[Character] 
+                    %s order by %s desc, cLevel desc", $Top, $Table, $Tipo, $where, $Table);
+                    $query = CTM_MSSQL::getInstance()->Query($Select); 
                     $count = CTM_MSSQL::getInstance()->NumRow($query);
                     if($count < 1) {
                     $return = die('<div class="warning-box">Nenhum personagem foi encontrado!</div>');
